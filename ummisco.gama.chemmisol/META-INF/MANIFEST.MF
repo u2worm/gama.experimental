@@ -7,4 +7,7 @@ Export-Package: ummisco.gama.chemmisol.skills
 Require-Bundle: msi.gama.core;bundle-version="1.9.1",
  msi.gama.ext;bundle-version="1.9.1"
 Automatic-Module-Name: ummisco.gama.chemmisol
+Bundle-ClassPath: lib/natives-0.1.jar,
+ .,
+ lib
 Bundle-RequiredExecutionEnvironment: JavaSE-17
