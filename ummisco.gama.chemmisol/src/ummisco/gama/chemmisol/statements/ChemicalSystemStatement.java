@@ -22,16 +22,19 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 	static final String CHEMICAL_SYSTEM_STATEMENT = "chemical_system";
 	
-	
 	public ChemicalSystemStatement(final IDescription desc) {
 	    super(desc);
 	}
 	
 	@Override
 	public ChemicalSystem privateExecuteIn(IScope scope) throws GamaRuntimeException {
+		// Executes the "chemical_system" statement itself by initializing a new ChemicalSystem
 		ChemicalSystem chemical_system = new ChemicalSystem(
 				scope.getCurrentSymbol().getDescription().getLitteral(IKeyword.NAME)
 				);
+		// Execute the sequence statements (in the "chemical_system" block) using the predefined AbstractStatementSequence,
+		// to execute "reaction" statements for example. See ReactionStatement for how reactions are handled.
+		super.privateExecuteIn(scope);
 		return chemical_system;
 	}
 }

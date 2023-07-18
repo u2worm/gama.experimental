@@ -8,12 +8,13 @@ import msi.gaml.types.GamaType;
 import msi.gaml.types.IType;
 
 @type(name = ChemicalSystemType.CHEMICAL_SYSTEM_TYPE,
-	id= IType.AVAILABLE_TYPES+1,
+	id= ChemicalSystemType.CHEMICAL_SYSTEM_TYPE_ID,
 	kind=ISymbolKind.Variable.REGULAR,
 	wraps= { ChemicalSystem.class },
 	internal=true
 )
 public class ChemicalSystemType extends GamaType<ChemicalSystem> {
+	public static final int CHEMICAL_SYSTEM_TYPE_ID = IType.AVAILABLE_TYPES+1;
 	public static final String CHEMICAL_SYSTEM_TYPE = "chemical_system";
 
 	@Override
