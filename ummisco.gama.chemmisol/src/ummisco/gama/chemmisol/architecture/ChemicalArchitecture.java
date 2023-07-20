@@ -17,28 +17,55 @@ import msi.gama.util.IMap;
 import msi.gaml.architecture.reflex.ReflexArchitecture;
 import msi.gaml.statements.IStatement;
 import msi.gaml.types.IType;
+import msi.gaml.variables.IVariable;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
 import ummisco.gama.chemmisol.ChemmisolLoader;
 import ummisco.gama.chemmisol.Component;
 import ummisco.gama.chemmisol.Phase;
-import ummisco.gama.chemmisol.statements.ChemicalComponentStatement;
 import ummisco.gama.chemmisol.statements.ChemicalSystemStatement;
 import ummisco.gama.chemmisol.types.ChemicalSystemType;
+import ummisco.gama.chemmisol.types.ChemicalComponentType;
 import ummisco.gama.chemmisol.types.ChemicalPhaseType;
 
 @skill(
-		name=ChemicalSystemArchitecture.CHEMICAL_ARCHITECTURE
+		name=ChemicalArchitecture.CHEMICAL_ARCHITECTURE
 		)
 @vars({
-	@variable(name=ChemicalSystemArchitecture.CHEMICAL_SYSTEM_VARIABLE, type = IType.MAP, internal=true),
-	@variable(name="AQUEOUS", type = IType.STRING)
+	@variable(name=ChemicalArchitecture.CHEMICAL_SYSTEM_VARIABLE, type = IType.MAP, internal=true),
+	@variable(name="AQUEOUS", type = IType.STRING),
+	@variable(name="MINERAL", type = IType.STRING),
+	@variable(name="SOLVENT", type = IType.STRING),
+	@variable(name="phase", type = IType.STRING),
+	@variable(name="concentration", type = IType.STRING)
 })
-public class ChemicalSystemArchitecture extends ReflexArchitecture {
+public class ChemicalArchitecture extends ReflexArchitecture {
 	private static final Phase AQUEOUS = Phase.AQUEOUS;
+	private static final Phase MINERAL = Phase.MINERAL;
+	private static final Phase SOLVENT = Phase.SOLVENT;
 
 	@getter("AQUEOUS")
 	public Phase getAqueous() {
 		return AQUEOUS;
+	}
+
+	@getter("MINERAL")
+	public Phase getMineral() {
+		return MINERAL;
+	}
+
+	@getter("SOLVENT")
+	public Phase getSolvent() {
+		return SOLVENT;
+	}
+	
+	@getter("phase")
+	public String getPhase() {
+		return ChemicalComponentType.CHEMICAL_PHASE;
+	}
+
+	@getter("concentration")
+	public String getConcentration() {
+		return ChemicalComponentType.CHEMICAL_CONCENTRATION;
 	}
 
 	/**
@@ -52,16 +79,14 @@ public class ChemicalSystemArchitecture extends ReflexArchitecture {
 	static final String CHEMICAL_ARCHITECTURE = "chemical";
 	
 	List<ChemicalSystemStatement> chemical_system_statements;
-	List<ChemicalComponentStatement> chemical_component_statements;
 	
 	static {
 		ChemmisolLoader.loadChemmisol();
 	}
 	
-	public ChemicalSystemArchitecture() {
+	public ChemicalArchitecture() {
 		super();
 		chemical_system_statements = new LinkedList<ChemicalSystemStatement>();
-		chemical_component_statements = new LinkedList<ChemicalComponentStatement>();
 	}
 	
 	@Override
@@ -78,16 +103,10 @@ public class ChemicalSystemArchitecture extends ReflexArchitecture {
 			
 			chemical_systems.put(chemical_system.getName(), chemical_system);
 		}
-		for(ChemicalComponentStatement chemical_component_statement : chemical_component_statements) {
-			Component component = (Component) scope.execute(chemical_component_statement).getValue();
-			for(ChemicalSystem chemical_system : chemical_systems.values()) {
-				chemical_system.addComponent(component);
-			}
-		}
-		scope.getAgent().setDirectVarValue(scope,
-				CHEMICAL_SYSTEM_VARIABLE,
-				chemical_systems
-				);
+		scope.getAgent().setAttribute(
+			CHEMICAL_SYSTEM_VARIABLE,
+			chemical_systems
+		);
 
 		return false;
 	}
@@ -96,8 +115,6 @@ public class ChemicalSystemArchitecture extends ReflexArchitecture {
 	public void addBehavior(final IStatement c) {
 		if (c instanceof ChemicalSystemStatement) {
 			chemical_system_statements.add((ChemicalSystemStatement) c);
-		} else if (c instanceof ChemicalComponentStatement) {
-			chemical_component_statements.add((ChemicalComponentStatement) c);
 		} else {
 			super.addBehavior(c);
 		}
