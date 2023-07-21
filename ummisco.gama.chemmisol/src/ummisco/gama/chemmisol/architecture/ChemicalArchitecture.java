@@ -107,11 +107,7 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	@Override
 	public void addBehavior(final IStatement c) {
 		if (c instanceof ChemicalSystemStatement) {
-			if(chemical_system_statement == null) {
-				chemical_system_statement = (ChemicalSystemStatement) c;
-			} else {
-				this.getDescription().error("Only one chemical_system can be declared in each species.");
-			}
+			chemical_system_statement = (ChemicalSystemStatement) c;
 		} else {
 			super.addBehavior(c);
 		}
