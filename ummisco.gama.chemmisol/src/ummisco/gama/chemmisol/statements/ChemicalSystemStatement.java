@@ -12,6 +12,7 @@ import msi.gaml.compilation.IDescriptionValidator;
 import msi.gaml.compilation.annotations.validator;
 import msi.gaml.descriptions.IDescription;
 import msi.gaml.descriptions.VariableDescription;
+import msi.gaml.expressions.IExpression;
 import msi.gaml.statements.AbstractStatementSequence;
 import msi.gaml.statements.Facets.Facet;
 import msi.gaml.statements.IStatement;
@@ -23,19 +24,18 @@ import msi.gama.common.interfaces.IKeyword;
 import msi.gaml.types.IType;
 import msi.gaml.variables.IVariable;
 import ummisco.gama.chemmisol.Reaction;
+import ummisco.gama.chemmisol.architecture.ChemicalArchitecture;
 import ummisco.gama.chemmisol.types.ChemicalComponent;
 import ummisco.gama.chemmisol.types.ChemicalComponentType;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
 
 @symbol(name = ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT, kind = ISymbolKind.BEHAVIOR, with_sequence = true)
 @inside(kinds = { ISymbolKind.SPECIES })
-@facets(value = { @facet(name = ChemicalSystemStatement.PH, type = IType.FLOAT, optional = true) })
+@facets(value = { @facet(name = ChemicalArchitecture.PH, type = IType.FLOAT, optional = true) })
 @validator(value = ChemicalSystemStatement.ReactionValidator.class)
 public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 	static final String CHEMICAL_SYSTEM_STATEMENT = "chemical_system";
-	static final String PH = "ph";
-
 
 	public static class ReactionValidator implements IDescriptionValidator<IDescription> {
 
@@ -54,8 +54,15 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 		}
 	}
 
+	final IExpression ph_expression;
+	
 	public ChemicalSystemStatement(final IDescription desc) {
 		super(desc);
+		if(desc.hasFacet(ChemicalArchitecture.PH)) {
+			ph_expression = desc.getFacet(ChemicalArchitecture.PH).getExpression();
+		} else {
+			ph_expression = null;
+		}
 	}
 
 	@Override
@@ -104,6 +111,9 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 			}
 		}
 
+		if(ph_expression != null) {
+			chemical_system.fixPH(((Number) scope.evaluate(ph_expression, scope.getAgent()).getValue()).doubleValue());
+		}
 		return chemical_system;
 	}
 }
