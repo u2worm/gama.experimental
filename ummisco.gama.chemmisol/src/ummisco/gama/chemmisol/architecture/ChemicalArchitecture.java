@@ -31,7 +31,7 @@ import ummisco.gama.chemmisol.types.ChemicalPhaseType;
 		name=ChemicalArchitecture.CHEMICAL_ARCHITECTURE
 		)
 @vars({
-	@variable(name=ChemicalArchitecture.CHEMICAL_SYSTEM_VARIABLE, type = IType.MAP, internal=true),
+	@variable(name=ChemicalArchitecture.CHEMICAL_SYSTEM_VARIABLE, type = IType.NONE, internal=true),
 	@variable(name="AQUEOUS", type = IType.STRING),
 	@variable(name="MINERAL", type = IType.STRING),
 	@variable(name="SOLVENT", type = IType.STRING),
@@ -42,6 +42,17 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	private static final Phase AQUEOUS = Phase.AQUEOUS;
 	private static final Phase MINERAL = Phase.MINERAL;
 	private static final Phase SOLVENT = Phase.SOLVENT;
+
+	/**
+	 * Name of the variable used to store ChemicalSystems in each Agent with a ChemicalSystem architecture.
+	 */
+	static final String CHEMICAL_SYSTEM_VARIABLE = "chemical_system";
+	
+	/**
+	 * Name of the ChemicalSystem architecture, passed to the "control:" facet of a species.
+	 */
+	static final String CHEMICAL_ARCHITECTURE = "chemical";
+
 
 	@getter("AQUEOUS")
 	public Phase getAqueous() {
@@ -67,18 +78,8 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	public String getConcentration() {
 		return ChemicalComponentType.CHEMICAL_CONCENTRATION;
 	}
-
-	/**
-	 * Name of the variable used to store ChemicalSystems in each Agent with a ChemicalSystem architecture.
-	 */
-	static final String CHEMICAL_SYSTEM_VARIABLE = "chemical_systems";
 	
-	/**
-	 * Name of the ChemicalSystem architecture, passed to the "control:" facet of a species.
-	 */
-	static final String CHEMICAL_ARCHITECTURE = "chemical";
-	
-	List<ChemicalSystemStatement> chemical_system_statements;
+	ChemicalSystemStatement chemical_system_statement;
 	
 	static {
 		ChemmisolLoader.loadChemmisol();
@@ -86,26 +87,18 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	
 	public ChemicalArchitecture() {
 		super();
-		chemical_system_statements = new LinkedList<ChemicalSystemStatement>();
 	}
 	
 	@Override
 	public boolean init(IScope scope) throws GamaRuntimeException {
 		super.init(scope);
 
-		@SuppressWarnings("unchecked")
-		IMap<String, ChemicalSystem> chemical_systems = GamaMapFactory.create(
-				scope.getType(IKeyword.STRING), scope.getType(ChemicalSystemType.CHEMICAL_SYSTEM_TYPE), false);
-		
-		for(ChemicalSystemStatement chemical_system_statement : chemical_system_statements) {
-			ChemicalSystem chemical_system =
-					(ChemicalSystem) scope.execute(chemical_system_statement).getValue();
-			
-			chemical_systems.put(chemical_system.getName(), chemical_system);
-		}
+		ChemicalSystem chemical_system =
+			(ChemicalSystem) scope.execute(chemical_system_statement).getValue();
+
 		scope.getAgent().setAttribute(
 			CHEMICAL_SYSTEM_VARIABLE,
-			chemical_systems
+			chemical_system
 		);
 
 		return false;
@@ -114,7 +107,11 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	@Override
 	public void addBehavior(final IStatement c) {
 		if (c instanceof ChemicalSystemStatement) {
-			chemical_system_statements.add((ChemicalSystemStatement) c);
+			if(chemical_system_statement == null) {
+				chemical_system_statement = (ChemicalSystemStatement) c;
+			} else {
+				this.getDescription().error("Only one chemical_system can be declared in each species.");
+			}
 		} else {
 			super.addBehavior(c);
 		}
@@ -123,15 +120,16 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	@Override
 	protected void clearBehaviors() {
 		super.clearBehaviors();
-		chemical_system_statements.clear();
+		chemical_system_statement = null;
 	}
 	
-	@action(name = "solve_equilibrium", 
-	        args = {
-	            @arg(name = "chemical_system", type = IType.ID, optional = false)}
-	)
+	@action(name = "solve_equilibrium")
 	public Object solve_equilibrium(final IScope scope) throws GamaRuntimeException {
-		System.out.println("Solve : " + scope.getArg("chemical_system", IType.ID));
+		System.out.println("Solve equilibrium");
+
+		((ChemicalSystem) scope.getAgent().getAttribute(
+			CHEMICAL_SYSTEM_VARIABLE
+		)).solve();
 		return null;
 	}
 }
