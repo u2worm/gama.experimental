@@ -43,6 +43,8 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	private static final Phase MINERAL = Phase.MINERAL;
 	private static final Phase SOLVENT = Phase.SOLVENT;
 
+	public static final String PH = "ph";
+
 	/**
 	 * Name of the variable used to store ChemicalSystems in each Agent with a ChemicalSystem architecture.
 	 */
@@ -121,11 +123,17 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	
 	@action(name = "solve_equilibrium")
 	public Object solve_equilibrium(final IScope scope) throws GamaRuntimeException {
-		System.out.println("Solve equilibrium");
-
 		((ChemicalSystem) scope.getAgent().getAttribute(
 			CHEMICAL_SYSTEM_VARIABLE
 		)).solve();
+		return null;
+	}
+
+	@action(name = "fix_ph",
+			args = {
+		            @arg(name = PH, type = IType.FLOAT, optional = false)})
+	public Object fix_ph(final IScope scope) throws GamaRuntimeException {
+		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).fixPH(scope.getFloatArg(PH));
 		return null;
 	}
 }
