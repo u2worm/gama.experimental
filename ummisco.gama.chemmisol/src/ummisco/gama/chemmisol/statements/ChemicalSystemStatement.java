@@ -9,7 +9,9 @@ import msi.gama.runtime.ExecutionResult;
 import msi.gama.runtime.IScope;
 import msi.gama.runtime.exceptions.GamaRuntimeException;
 import msi.gaml.descriptions.IDescription;
+import msi.gaml.descriptions.VariableDescription;
 import msi.gaml.statements.AbstractStatementSequence;
+import msi.gaml.statements.Facets.Facet;
 import msi.gaml.statements.IStatement;
 
 import java.util.Map;
@@ -24,10 +26,11 @@ import ummisco.gama.chemmisol.types.ChemicalSystem;
 
 @symbol(name = ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT, kind = ISymbolKind.BEHAVIOR, with_sequence = true)
 @inside(kinds = { ISymbolKind.SPECIES })
-@facets(value = { @facet(name = IKeyword.NAME, type = IType.ID, optional = true) }, omissible = IKeyword.NAME)
+@facets(value = { @facet(name = ChemicalSystemStatement.PH, type = IType.FLOAT, optional = true) })
 public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 	static final String CHEMICAL_SYSTEM_STATEMENT = "chemical_system";
+	static final String PH = "ph";
 
 	public ChemicalSystemStatement(final IDescription desc) {
 		super(desc);
@@ -42,6 +45,11 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 		// ChemicalComponent variables post-treatment
 		for (IVariable var : scope.getAgent().getSpecies().getVars()) {
+			System.out.println("Var: " + var.getKeyword() + "-" + var.getName());
+			for(Facet facet : var.getDescription().getFacets().getFacets()) {
+				System.out.println("  Var facets: " + facet);
+				
+			}
 			if (var.getKeyword().equals(ChemicalComponentType.CHEMICAL_COMPONENT_TYPE)) {
 				ChemicalComponent component = (ChemicalComponent) scope.getAgent().getAttribute(var.getName());
 				// Sets the name of the component according to the name of the variable
