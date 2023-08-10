@@ -3,24 +3,14 @@ package ummisco.gama.chemmisol.types;
 import java.util.List;
 import java.util.Map;
 
-import msi.gama.common.interfaces.IKeyword;
 import msi.gama.precompiler.ISymbolKind;
-import msi.gama.precompiler.GamlAnnotations.facet;
-import msi.gama.precompiler.GamlAnnotations.facets;
-import msi.gama.precompiler.GamlAnnotations.inside;
-import msi.gama.precompiler.GamlAnnotations.symbol;
 import msi.gama.precompiler.GamlAnnotations.type;
 import msi.gama.runtime.IScope;
 import msi.gama.runtime.exceptions.GamaRuntimeException;
 import msi.gaml.constants.GamlCoreUnits;
-import msi.gaml.descriptions.IDescription;
-import msi.gaml.expressions.IExpression;
-import msi.gaml.statements.AbstractStatement;
 import msi.gaml.types.GamaType;
 import msi.gaml.types.IType;
-import ummisco.gama.chemmisol.Component;
 import ummisco.gama.chemmisol.Phase;
-import ummisco.gama.chemmisol.units.ChemicalConstants;
 import ummisco.gama.chemmisol.units.ChemicalUnits;
 
 @type(
