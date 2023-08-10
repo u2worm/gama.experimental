@@ -1,9 +1,5 @@
 package ummisco.gama.chemmisol.statements;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import msi.gama.common.interfaces.IKeyword;
 import msi.gama.precompiler.ISymbolKind;
 import msi.gama.precompiler.GamlAnnotations.facet;
@@ -14,19 +10,16 @@ import msi.gama.precompiler.GamlAnnotations.symbol;
 import msi.gama.runtime.IScope;
 import msi.gama.runtime.exceptions.GamaRuntimeException;
 import msi.gaml.compilation.IDescriptionValidator;
-import msi.gaml.compilation.annotations.serializer;
 import msi.gaml.compilation.annotations.validator;
 import msi.gaml.descriptions.IDescription;
 import msi.gaml.expressions.IExpression;
 import msi.gaml.statements.AbstractStatement;
 import msi.gaml.types.IType;
-import ummisco.gama.chemmisol.Component;
-import ummisco.gama.chemmisol.Phase;
 import ummisco.gama.chemmisol.Reaction;
 import ummisco.gama.chemmisol.types.ChemicalComponent;
-import ummisco.gama.chemmisol.types.ChemicalComponentType;
 import ummisco.gama.chemmisol.types.ChemicalEquation;
 import ummisco.gama.chemmisol.types.ChemicalEquationType;
+import ummisco.gama.chemmisol.types.ChemicalSpecies;
 import ummisco.gama.chemmisol.types.ChemicalEquation.ChemicalEquationItem;
 
 @symbol(name = ReactionStatement.REACTION_STATEMENT, kind=ISymbolKind.SINGLE_STATEMENT, with_sequence=false)
@@ -81,9 +74,14 @@ public class ReactionStatement extends AbstractStatement {
 	}
 
 	@operator("*")
-	public static ChemicalEquation stoichiometry(final IScope scope, int coef, ChemicalComponent component) {
+	public static ChemicalEquation stoichiometry(final IScope scope, int coef, ChemicalSpecies species) {
 		return new ChemicalEquation().add(
-				new ChemicalEquationItem(component.getName(), component.getPhase(), coef));
+				new ChemicalEquationItem(species.getName(), species.getPhase(), coef));
+	}
+
+	@operator("*")
+	public static ChemicalEquation stoichiometry(final IScope scope, int coef, ChemicalComponent component) {
+		return stoichiometry(scope, coef, component.getSpecies());
 	}
 	
 	@operator("+")
@@ -94,18 +92,43 @@ public class ReactionStatement extends AbstractStatement {
 	}
 
 	@operator("+")
+	public static ChemicalEquation addReagents(final IScope scope, ChemicalEquation r, ChemicalSpecies s) {
+		return addReagents(scope, r, stoichiometry(scope, 1, s));
+	}
+
+	@operator("+")
 	public static ChemicalEquation addReagents(final IScope scope, ChemicalEquation r, ChemicalComponent c) {
-		return addReagents(scope, r, stoichiometry(scope, 1, c));
+		return addReagents(scope, r, c.getSpecies());
+	}
+
+	@operator("+")
+	public static ChemicalEquation addReagents(final IScope scope, ChemicalSpecies s, ChemicalEquation r) {
+		return addReagents(scope, stoichiometry(scope, 1, s), r);
 	}
 
 	@operator("+")
 	public static ChemicalEquation addReagents(final IScope scope, ChemicalComponent c, ChemicalEquation r) {
-		return addReagents(scope, stoichiometry(scope, 1, c), r);
+		return addReagents(scope, c.getSpecies(), r);
+	}
+
+	@operator("+")
+	public static ChemicalEquation addReagents(final IScope scope, ChemicalSpecies s1, ChemicalSpecies s2) {
+		return addReagents(scope, stoichiometry(scope, 1, s1), stoichiometry(scope, 1, s2));
+	}
+
+	@operator("+")
+	public static ChemicalEquation addReagents(final IScope scope, ChemicalComponent c1, ChemicalSpecies s2) {
+		return addReagents(scope, c1.getSpecies(), s2);
+	}
+
+	@operator("+")
+	public static ChemicalEquation addReagents(final IScope scope, ChemicalSpecies s1, ChemicalComponent c2) {
+		return addReagents(scope, s1, c2.getSpecies());
 	}
 
 	@operator("+")
 	public static ChemicalEquation addReagents(final IScope scope, ChemicalComponent c1, ChemicalComponent c2) {
-		return addReagents(scope, stoichiometry(scope, 1, c1), stoichiometry(scope, 1, c2));
+		return addReagents(scope, c1.getSpecies(), c2.getSpecies());
 	}
 
 	@operator("=")
@@ -117,13 +140,38 @@ public class ReactionStatement extends AbstractStatement {
 	}
 
 	@operator("=")
+	public static ChemicalEquation equals(final IScope scope, ChemicalEquation r, ChemicalSpecies s) {
+		return equals(scope, r, stoichiometry(scope, 1, s));
+	}
+
+	@operator("=")
 	public static ChemicalEquation equals(final IScope scope, ChemicalEquation r, ChemicalComponent c) {
 		return equals(scope, r, stoichiometry(scope, 1, c));
 	}
 
 	@operator("=")
+	public static ChemicalEquation equals(final IScope scope, ChemicalSpecies s, ChemicalEquation r) {
+		return equals(scope, stoichiometry(scope, 1, s), r);
+	}
+
+	@operator("=")
 	public static ChemicalEquation equals(final IScope scope, ChemicalComponent c, ChemicalEquation r) {
 		return equals(scope, stoichiometry(scope, 1, c), r);
+	}
+
+	@operator("=")
+	public static ChemicalEquation equals(final IScope scope, ChemicalSpecies s1, ChemicalSpecies s2) {
+		return equals(scope, stoichiometry(scope, 1, s1), stoichiometry(scope, 1, s2));
+	}
+
+	@operator("=")
+	public static ChemicalEquation equals(final IScope scope, ChemicalComponent c1, ChemicalSpecies s2) {
+		return equals(scope, stoichiometry(scope, 1, c1), stoichiometry(scope, 1, s2));
+	}
+
+	@operator("=")
+	public static ChemicalEquation equals(final IScope scope, ChemicalSpecies s1, ChemicalComponent c2) {
+		return equals(scope, stoichiometry(scope, 1, s1), stoichiometry(scope, 1, c2));
 	}
 
 	@operator("=")

@@ -18,6 +18,7 @@ import msi.gaml.statements.Facets.Facet;
 import msi.gaml.statements.IStatement;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import msi.gama.common.interfaces.IKeyword;
@@ -27,11 +28,13 @@ import ummisco.gama.chemmisol.Reaction;
 import ummisco.gama.chemmisol.architecture.ChemicalArchitecture;
 import ummisco.gama.chemmisol.types.ChemicalComponent;
 import ummisco.gama.chemmisol.types.ChemicalComponentType;
+import ummisco.gama.chemmisol.types.ChemicalSpecies;
+import ummisco.gama.chemmisol.types.ChemicalSpeciesType;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
 
 @symbol(name = ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT, kind = ISymbolKind.BEHAVIOR, with_sequence = true)
 @inside(kinds = { ISymbolKind.SPECIES })
-@facets(value = { @facet(name = ChemicalArchitecture.PH, type = IType.FLOAT, optional = true) })
+@facets(value = { @facet(name = ChemicalArchitecture.PH, type = IType.LIST, optional = true) })
 @validator(value = ChemicalSystemStatement.ReactionValidator.class)
 public class ChemicalSystemStatement extends AbstractStatementSequence {
 
@@ -41,7 +44,6 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 		@Override
 		public void validate(IDescription description) {
-
 			Iterator<IDescription> it = description.getSpeciesContext().getChildrenWithKeyword(ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT).iterator();
 			int n = 0;
 			while(it.hasNext() && n < 2) {
@@ -49,7 +51,7 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 				it.next();
 			}
 			if(n > 1) {
-				description.error("Only one chemical_system can be declared in each chemical species.");
+				description.error("Only one chemical_system can be declared in each chemical agent species.");
 			}
 		}
 	}
@@ -77,9 +79,15 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 			if (var.getKeyword().equals(ChemicalComponentType.CHEMICAL_COMPONENT_TYPE)) {
 				ChemicalComponent component = (ChemicalComponent) scope.getAgent().getAttribute(var.getName());
 				// Sets the name of the component according to the name of the variable
-				component.setName(var.getName());
+				component.getSpecies().setName(var.getName());
 				// Adds the component to the system
 				chemical_system.addComponent(component);
+			} else if(var.getKeyword().equals(ChemicalSpeciesType.CHEMICAL_SPECIES_TYPE)) {
+				ChemicalSpecies species = (ChemicalSpecies) scope.getAgent().getAttribute(var.getName());
+				// Sets the name of the component according to the name of the variable
+				species.setName(var.getName());
+				// Adds the component to the system
+				chemical_system.addSpecies(species);
 			}
 		}
 
@@ -100,9 +108,15 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 				// This command defines a chemical component
 				ChemicalComponent component = (ChemicalComponent) result.getValue();
 				// Sets the name of the local component
-				component.setName(command.getDescription().getName());
+				component.getSpecies().setName(command.getDescription().getName());
 				// Adds the local component to the chemical system
 				chemical_system.addComponent(component);
+			} else if(command.getFacet(IKeyword.NAME).getGamlType()
+					.id() == ChemicalSpeciesType.CHEMICAL_SPECIES_TYPE_ID) {
+				ChemicalSpecies species = (ChemicalSpecies) result.getValue();
+				// Sets the name of the local component
+				species.setName(command.getDescription().getName());
+				// No call to system.addSpecies(), since local chemical species do not need to be tracked.
 			}
 
 			if (command instanceof ReactionStatement) {
@@ -112,7 +126,19 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 		}
 
 		if(ph_expression != null) {
-			chemical_system.fixPH(((Number) scope.evaluate(ph_expression, scope.getAgent()).getValue()).doubleValue());
+			List<?> ph_arg = ((List<?>) scope.evaluate(ph_expression, scope.getAgent()).getValue());
+			if(ph_arg.get(1) instanceof ChemicalComponent) {
+				chemical_system.fixPH(
+						((Number) ph_arg.get(0)).doubleValue(),
+						(ChemicalComponent) ph_arg.get(1)
+						);
+			}
+		}
+
+		try {
+			chemical_system.setUp();
+		} catch (ChemicalSystem.ChemmisolCoreException e) {
+			throw GamaRuntimeException.create(e, scope);
 		}
 		return chemical_system;
 	}

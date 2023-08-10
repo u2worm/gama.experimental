@@ -1,9 +1,5 @@
 package ummisco.gama.chemmisol.architecture;
 
-import java.util.LinkedList;
-import java.util.List;
-
-import msi.gama.common.interfaces.IKeyword;
 import msi.gama.precompiler.GamlAnnotations.action;
 import msi.gama.precompiler.GamlAnnotations.arg;
 import msi.gama.precompiler.GamlAnnotations.getter;
@@ -12,20 +8,15 @@ import msi.gama.precompiler.GamlAnnotations.variable;
 import msi.gama.precompiler.GamlAnnotations.vars;
 import msi.gama.runtime.IScope;
 import msi.gama.runtime.exceptions.GamaRuntimeException;
-import msi.gama.util.GamaMapFactory;
-import msi.gama.util.IMap;
 import msi.gaml.architecture.reflex.ReflexArchitecture;
 import msi.gaml.statements.IStatement;
 import msi.gaml.types.IType;
-import msi.gaml.variables.IVariable;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
 import ummisco.gama.chemmisol.ChemmisolLoader;
-import ummisco.gama.chemmisol.Component;
 import ummisco.gama.chemmisol.Phase;
 import ummisco.gama.chemmisol.statements.ChemicalSystemStatement;
-import ummisco.gama.chemmisol.types.ChemicalSystemType;
+import ummisco.gama.chemmisol.types.ChemicalComponent;
 import ummisco.gama.chemmisol.types.ChemicalComponentType;
-import ummisco.gama.chemmisol.types.ChemicalPhaseType;
 
 @skill(
 		name=ChemicalArchitecture.CHEMICAL_ARCHITECTURE
@@ -44,6 +35,8 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	private static final Phase SOLVENT = Phase.SOLVENT;
 
 	public static final String PH = "ph";
+	public static final String H_COMPONENT = "H_component";
+	public static final String REACTION = "reaction";
 
 	/**
 	 * Name of the variable used to store ChemicalSystems in each Agent with a ChemicalSystem architecture.
@@ -123,17 +116,33 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	
 	@action(name = "solve_equilibrium")
 	public Object solve_equilibrium(final IScope scope) throws GamaRuntimeException {
-		((ChemicalSystem) scope.getAgent().getAttribute(
-			CHEMICAL_SYSTEM_VARIABLE
-		)).solve();
+		try {
+			((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).solve();
+		} catch (ChemicalSystem.ChemmisolCoreException e) {
+			throw GamaRuntimeException.create(e, scope);
+		}
 		return null;
 	}
 
 	@action(name = "fix_ph",
 			args = {
-		            @arg(name = PH, type = IType.FLOAT, optional = false)})
+		            @arg(name = PH, type = IType.FLOAT, optional = false),
+		            @arg(name = H_COMPONENT, type=ChemicalComponentType.CHEMICAL_COMPONENT_TYPE_ID, optional = false)
+		            })
 	public Object fix_ph(final IScope scope) throws GamaRuntimeException {
-		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).fixPH(scope.getFloatArg(PH));
+		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).fixPH(
+				scope.getFloatArg(PH),
+				(ChemicalComponent) scope.getArg(H_COMPONENT)
+				);
 		return null;
+	}
+
+	@action(name = "reaction_quotient",
+			args = {
+		            @arg(name = REACTION, type=IType.STRING, optional = false)
+		            })
+	public double reaction_quotient(final IScope scope) throws GamaRuntimeException {
+		ChemicalSystem system = ((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE));
+		return system.reactionQuotient(scope.getStringArg(REACTION));
 	}
 }
