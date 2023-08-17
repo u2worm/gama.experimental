@@ -35,8 +35,9 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	private static final Phase SOLVENT = Phase.SOLVENT;
 
 	public static final String PH = "ph";
-	public static final String H_COMPONENT = "H_component";
+	public static final String COMPONENT = "component";
 	public static final String REACTION = "reaction";
+	public static final String CONCENTRATION = "concentration";
 
 	/**
 	 * Name of the variable used to store ChemicalSystems in each Agent with a ChemicalSystem architecture.
@@ -127,14 +128,26 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	@action(name = "fix_ph",
 			args = {
 		            @arg(name = PH, type = IType.FLOAT, optional = false),
-		            @arg(name = H_COMPONENT, type=ChemicalComponentType.CHEMICAL_COMPONENT_TYPE_ID, optional = false)
+		            @arg(name = COMPONENT, type=ChemicalComponentType.CHEMICAL_COMPONENT_TYPE_ID, optional = false)
 		            })
 	public Object fix_ph(final IScope scope) throws GamaRuntimeException {
 		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).fixPH(
 				scope.getFloatArg(PH),
-				(ChemicalComponent) scope.getArg(H_COMPONENT)
+				(ChemicalComponent) scope.getArg(COMPONENT)
 				);
 		return null;
+	}
+	
+	@action(name = "set_total_concentration",
+			args = {
+					@arg(name = COMPONENT, type=ChemicalComponentType.CHEMICAL_COMPONENT_TYPE_ID, optional=false),
+					@arg(name = CONCENTRATION, type=IType.FLOAT, optional=false)
+			})
+	public void set_total_concentration(final IScope scope) throws GamaRuntimeException {
+		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE)).setTotalConcentration(
+				(ChemicalComponent) scope.getArg(COMPONENT),
+				scope.getFloatArg(CONCENTRATION)
+				);
 	}
 
 	@action(name = "reaction_quotient",
