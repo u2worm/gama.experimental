@@ -2,10 +2,10 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Chemmisol
 Bundle-SymbolicName: ummisco.gama.chemmisol;singleton:=true
-Bundle-Version: 1.0.0.qualifier
+Bundle-Version: 1.9.2.qualifier
 Export-Package: ummisco.gama.chemmisol
-Require-Bundle: msi.gama.core;bundle-version="1.9.1",
- msi.gama.ext;bundle-version="1.9.1"
+Require-Bundle: msi.gama.core;bundle-version="1.9.2",
+ msi.gama.ext;bundle-version="1.9.2"
 Automatic-Module-Name: ummisco.gama.chemmisol
 Bundle-ClassPath: lib/natives-0.1.jar,
  .,
