@@ -2,8 +2,6 @@ package ummisco.gama.chemmisol;
 
 import java.io.IOException;
 
-import ummisco.gama.Chemmisol;
-
 public class ChemmisolLoader {
 	private static String resourcePath() {
 		String os = System.getProperty("os.name").toLowerCase();
