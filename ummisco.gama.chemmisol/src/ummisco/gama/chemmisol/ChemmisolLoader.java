@@ -38,7 +38,7 @@ public class ChemmisolLoader {
 	public static void loadChemmisol() {
 		String os_resource_path = resourcePath();
 		try {
-			Chemmisol.loadLibraryFromResource(ChemmisolLoader.class, os_resource_path);
+			Chemmisol.loadChemmisolLibrariesFromResource(ChemmisolLoader.class, os_resource_path);
 		} catch(IOException e) {
 			System.err.println(e);
 			System.err.println("Cannot load native chemmisol library from "

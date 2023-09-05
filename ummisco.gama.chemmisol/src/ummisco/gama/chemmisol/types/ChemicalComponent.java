@@ -41,8 +41,8 @@ public class ChemicalComponent extends ummisco.gama.chemmisol.ChemicalComponent 
 		this(phase, 0.0);
 	}
 
-	public ChemicalComponent(double concentration) {
-		this(Phase.AQUEOUS, concentration);
+	public ChemicalComponent(double total_concentration) {
+		this(Phase.AQUEOUS, total_concentration);
 	}
 	
 	public ChemicalComponent() {
@@ -56,7 +56,7 @@ public class ChemicalComponent extends ummisco.gama.chemmisol.ChemicalComponent 
 
 	@getter("concentration")
 	public double getConcentration() {
-		return super.getConcentration();
+		return super.getSpecies().getConcentration();
 	}
 
 	@getter("name")
