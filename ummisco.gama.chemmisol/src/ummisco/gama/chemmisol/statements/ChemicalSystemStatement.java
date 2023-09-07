@@ -1,5 +1,6 @@
 package ummisco.gama.chemmisol.statements;
 
+import msi.gama.precompiler.GamlAnnotations.doc;
 import msi.gama.precompiler.GamlAnnotations.facet;
 import msi.gama.precompiler.GamlAnnotations.facets;
 import msi.gama.precompiler.GamlAnnotations.inside;
@@ -11,15 +12,12 @@ import msi.gama.runtime.exceptions.GamaRuntimeException;
 import msi.gaml.compilation.IDescriptionValidator;
 import msi.gaml.compilation.annotations.validator;
 import msi.gaml.descriptions.IDescription;
-import msi.gaml.descriptions.VariableDescription;
 import msi.gaml.expressions.IExpression;
 import msi.gaml.statements.AbstractStatementSequence;
-import msi.gaml.statements.Facets.Facet;
 import msi.gaml.statements.IStatement;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import msi.gama.common.interfaces.IKeyword;
 import msi.gaml.types.IType;
@@ -34,8 +32,18 @@ import ummisco.gama.chemmisol.types.ChemicalSystem;
 
 @symbol(name = ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT, kind = ISymbolKind.BEHAVIOR, with_sequence = true)
 @inside(kinds = { ISymbolKind.SPECIES })
-@facets(value = { @facet(name = ChemicalArchitecture.PH, type = IType.LIST, optional = true) })
+@facets(value = { @facet(
+		name = ChemicalArchitecture.PH, type = IType.LIST, optional = true,
+		doc=@doc("Initial fixed pH value.")) })
 @validator(value = ChemicalSystemStatement.ReactionValidator.class)
+@doc("""
+	Sequence statement used to declare a chemical system at the agent scope of \
+	an agent with the chemical skill.
+	The sequence of statements might contain any GAML declaration, local \
+	declarations of chemical_components and chemical_species, and the definition \
+	of reactions.
+	"""
+)
 public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 	static final String CHEMICAL_SYSTEM_STATEMENT = "chemical_system";

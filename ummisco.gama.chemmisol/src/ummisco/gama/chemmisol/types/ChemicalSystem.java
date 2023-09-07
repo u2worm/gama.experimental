@@ -10,7 +10,7 @@ import msi.gaml.types.IType;
     @variable (
         name = "name",
         type = IType.STRING,
-        doc = { @doc ("Returns the name of the ChemicalSystem") })
+        doc = { @doc ("Name of the ChemicalSystem") })
 })
 public class ChemicalSystem extends ummisco.gama.chemmisol.ChemicalSystem {
 
