@@ -21,6 +21,15 @@ public class ChemicalSystem extends ummisco.gama.chemmisol.ChemicalSystem {
 		this.name = name;
 	}
 	
+	public ChemicalSystem(
+			String name,
+			double solid_concentration,
+			double specific_surface_area,
+			double site_concentration) {
+		super(solid_concentration, specific_surface_area, site_concentration);
+		this.name = name;
+	}
+
 	@getter("name")
 	public String getName() {
 		return name;

@@ -29,12 +29,43 @@ import ummisco.gama.chemmisol.types.ChemicalComponentType;
 import ummisco.gama.chemmisol.types.ChemicalSpecies;
 import ummisco.gama.chemmisol.types.ChemicalSpeciesType;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
+import ummisco.gama.chemmisol.units.UnitConversion;
 
 @symbol(name = ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT, kind = ISymbolKind.BEHAVIOR, with_sequence = true)
 @inside(kinds = { ISymbolKind.SPECIES })
-@facets(value = { @facet(
-		name = ChemicalArchitecture.PH, type = IType.LIST, optional = true,
-		doc=@doc("Initial fixed pH value.")) })
+@facets(value = {
+		@facet(
+				name = ChemicalArchitecture.PH,
+				type = IType.LIST, optional = true,
+				doc = @doc("Initial fixed pH value.")),
+		@facet(
+				name = ChemicalSystemStatement.SOLID_CONCENTRATION,
+				type = IType.FLOAT, optional = true,
+				doc = @doc("""
+						Mass concentration of mineral in suspension in the \
+						solution (example unit: #mass/#l).
+						"""
+						)
+		),
+		@facet(
+				name = ChemicalSystemStatement.SPECIFIC_SURFACE_AREA,
+				type = IType.FLOAT, optional = true,
+				doc = @doc("""
+						Surface of the solid in contact with the solution per \
+						unit of mass (example unit: #m2/#g)
+						""")
+
+			),
+		@facet(
+				name = ChemicalSystemStatement.SITE_CONCENTRATION,
+				type = IType.FLOAT, optional = true,
+				doc = @doc("""
+						Quantity of sites per unit of surface in contact with \
+						the solution (example unit: #entities/#nm2)
+						""")
+
+			)
+		})
 @validator(value = ChemicalSystemStatement.ReactionValidator.class)
 @doc("""
 	Sequence statement used to declare a chemical system at the agent scope of \
@@ -47,58 +78,137 @@ import ummisco.gama.chemmisol.types.ChemicalSystem;
 public class ChemicalSystemStatement extends AbstractStatementSequence {
 
 	static final String CHEMICAL_SYSTEM_STATEMENT = "chemical_system";
+	static final String SOLID_CONCENTRATION = "solid_concentration";
+	static final String SPECIFIC_SURFACE_AREA = "specific_surface_area";
+	static final String SITE_CONCENTRATION = "site_concentration";
 
 	public static class ReactionValidator implements IDescriptionValidator<IDescription> {
 
 		@Override
 		public void validate(IDescription description) {
-			Iterator<IDescription> it = description.getSpeciesContext().getChildrenWithKeyword(ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT).iterator();
+			Iterator<IDescription> it = description.getSpeciesContext()
+					.getChildrenWithKeyword(ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT)
+					.iterator();
 			int n = 0;
 			while(it.hasNext() && n < 2) {
 				n = n + 1;
 				it.next();
 			}
 			if(n > 1) {
-				description.error("Only one chemical_system can be declared in each chemical agent species.");
+				description.error("""
+						Only one chemical_system can be declared in each \
+						chemical agent species.
+						""");
+			} else if(n == 1) {
+				IDescription system = description.getSpeciesContext()
+						.getChildWithKeyword(ChemicalSystemStatement.CHEMICAL_SYSTEM_STATEMENT);
+				if(system.hasFacet(SOLID_CONCENTRATION) ||
+						system.hasFacet(SPECIFIC_SURFACE_AREA) ||
+						system.hasFacet(SITE_CONCENTRATION)) {
+					if(!(system.hasFacet(SOLID_CONCENTRATION) &&
+						system.hasFacet(SPECIFIC_SURFACE_AREA) &&
+						system.hasFacet(SITE_CONCENTRATION))) {
+						description.error("""
+								If one of the solid_concentration or \
+								specific_surface_area or site_concentration \
+								facet is specified, the three parameters must be \
+								specified so the site count can be properly \
+								computed.
+								""");
+					}
+				}
 			}
 		}
 	}
 
 	final IExpression ph_expression;
+	final IExpression solid_concentration_expression;
+	final IExpression specific_surface_area_expression;
+	final IExpression site_concentration_expression;
 	
 	public ChemicalSystemStatement(final IDescription desc) {
 		super(desc);
-		if(desc.hasFacet(ChemicalArchitecture.PH)) {
-			ph_expression = desc.getFacet(ChemicalArchitecture.PH).getExpression();
-		} else {
-			ph_expression = null;
-		}
+		ph_expression = desc.hasFacet(ChemicalArchitecture.PH) ?
+				desc.getFacet(ChemicalArchitecture.PH).getExpression()
+				: null;
+		solid_concentration_expression = desc.hasFacet(SOLID_CONCENTRATION) ?
+				desc.getFacet(SOLID_CONCENTRATION).getExpression()
+				: null;
+		specific_surface_area_expression = desc.hasFacet(SPECIFIC_SURFACE_AREA) ?
+				desc.getFacet(SPECIFIC_SURFACE_AREA).getExpression()
+				: null;
+		site_concentration_expression = desc.hasFacet(SITE_CONCENTRATION) ?
+				desc.getFacet(SITE_CONCENTRATION).getExpression()
+				: null;
 	}
 
 	@Override
 	public ChemicalSystem privateExecuteIn(IScope scope) throws GamaRuntimeException {
 		// Executes the "chemical_system" statement itself by initializing a new
 		// ChemicalSystem
-		ChemicalSystem chemical_system = new ChemicalSystem(
-				scope.getCurrentSymbol().getDescription().getLitteral(IKeyword.NAME));
 
-		// ChemicalComponent variables post-treatment
+		/* Sets the names of defined components */
+
+		// This is done before the initialization of the chemical system, so
+		// that chemical system facets can safely use chemical_component and
+		// chemical_species variables
+
 		for (IVariable var : scope.getAgent().getSpecies().getVars()) {
 			if (var.getKeyword().equals(ChemicalComponentType.CHEMICAL_COMPONENT_TYPE)) {
 				ChemicalComponent component = (ChemicalComponent) scope.getAgent().getAttribute(var.getName());
 				// Sets the name of the component according to the name of the variable
 				component.getSpecies().setName(var.getName());
 				// Adds the component to the system
-				chemical_system.addComponent(component);
 			} else if(var.getKeyword().equals(ChemicalSpeciesType.CHEMICAL_SPECIES_TYPE)) {
 				ChemicalSpecies species = (ChemicalSpecies) scope.getAgent().getAttribute(var.getName());
-				// Sets the name of the component according to the name of the variable
+				// Sets the name of the species according to the name of the variable
 				species.setName(var.getName());
+			}
+		}
+
+
+		/* Initializes the chemical system */
+
+		ChemicalSystem chemical_system;
+		String chemical_system_name = scope.getCurrentSymbol().getDescription().getLitteral(IKeyword.NAME);
+		if (solid_concentration_expression != null &&
+				specific_surface_area_expression != null &&
+				site_concentration_expression != null) {
+			Double solid_concentration =
+					(Double) scope.evaluate(solid_concentration_expression, scope.getAgent()).getValue();
+			Double specific_surface_area =
+					(Double) scope.evaluate(specific_surface_area_expression, scope.getAgent()).getValue();
+			Double site_concentration =
+					(Double) scope.evaluate(site_concentration_expression, scope.getAgent()).getValue();
+			chemical_system = new ChemicalSystem(
+					chemical_system_name,
+					UnitConversion.convertSolidConcentration(solid_concentration),
+					UnitConversion.convertSpecificSurfaceArea(specific_surface_area),
+					UnitConversion.convertSiteConcentration(site_concentration));
+		} else {
+			chemical_system = new ChemicalSystem(chemical_system_name);
+		}
+
+		/* Adds chemical_species and chemical_components to the chemical system */
+
+		for (IVariable var : scope.getAgent().getSpecies().getVars()) {
+			if (var.getKeyword().equals(ChemicalComponentType.CHEMICAL_COMPONENT_TYPE)) {
+				ChemicalComponent component = (ChemicalComponent) scope.getAgent().getAttribute(var.getName());
+				// Adds the component to the system
+				try {
+					chemical_system.addComponent(component);
+				} catch (ChemicalSystem.ChemmisolCoreException e) {
+					throw GamaRuntimeException.create(e, scope);
+				}
+			} else if(var.getKeyword().equals(ChemicalSpeciesType.CHEMICAL_SPECIES_TYPE)) {
+				ChemicalSpecies species = (ChemicalSpecies) scope.getAgent().getAttribute(var.getName());
 				// Adds the component to the system
 				chemical_system.addSpecies(species);
 			}
 		}
 
+		/* chemical system statements execution */
+		
 		// Execute the sequence statements (in the "chemical_system" block) using the
 		// predefined AbstractStatementSequence, to execute "reaction" statements for
 		// example. See ReactionStatement for how reactions are handled.
@@ -118,13 +228,18 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 				// Sets the name of the local component
 				component.getSpecies().setName(command.getDescription().getName());
 				// Adds the local component to the chemical system
-				chemical_system.addComponent(component);
-			} else if(command.getFacet(IKeyword.NAME).getGamlType()
+				try {
+					chemical_system.addComponent(component);
+				} catch (ChemicalSystem.ChemmisolCoreException e) {
+					throw GamaRuntimeException.create(e, scope);
+				}
+			} else if (command.getFacet(IKeyword.NAME).getGamlType()
 					.id() == ChemicalSpeciesType.CHEMICAL_SPECIES_TYPE_ID) {
 				ChemicalSpecies species = (ChemicalSpecies) result.getValue();
 				// Sets the name of the local component
 				species.setName(command.getDescription().getName());
-				// No call to system.addSpecies(), since local chemical species do not need to be tracked.
+				// No call to system.addSpecies(), since local chemical species do not need to
+				// be tracked.
 			}
 
 			if (command instanceof ReactionStatement) {
@@ -133,6 +248,8 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 			}
 		}
 
+		/* Sets ph from the ph facet */
+		
 		if(ph_expression != null) {
 			List<?> ph_arg = ((List<?>) scope.evaluate(ph_expression, scope.getAgent()).getValue());
 			if(ph_arg.get(1) instanceof ChemicalComponent) {
@@ -143,6 +260,8 @@ public class ChemicalSystemStatement extends AbstractStatementSequence {
 			}
 		}
 
+		/* Sets up the chemical system */
+		
 		try {
 			chemical_system.setUp();
 		} catch (ChemicalSystem.ChemmisolCoreException e) {

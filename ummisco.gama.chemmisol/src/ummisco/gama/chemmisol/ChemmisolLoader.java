@@ -2,7 +2,18 @@ package ummisco.gama.chemmisol;
 
 import java.io.IOException;
 
+import ummisco.gama.dev.utils.DEBUG;
+
 public class ChemmisolLoader {
+	static {
+		DEBUG.OFF();
+	}
+
+	/* Currently disabled. */
+	//private static String debug_suffix = DEBUG.IS_ON() ? "-debug" : "";
+
+	private static String debug_suffix = "";
+	
 	private static String resourcePath() {
 		String os = System.getProperty("os.name").toLowerCase();
 		String arch = System.getProperty("os.arch").toLowerCase();
@@ -32,6 +43,7 @@ public class ChemmisolLoader {
 		} else {
 			throw new RuntimeException("Cannot load native chemmisol-cpp library for unsuported architecture: " + arch);
 		}
+		resource_path = resource_path + debug_suffix;
 		return resource_path + "/";
 	}
 	

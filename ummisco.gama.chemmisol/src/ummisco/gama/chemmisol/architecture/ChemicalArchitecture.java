@@ -1,5 +1,6 @@
 package ummisco.gama.chemmisol.architecture;
 
+import msi.gama.metamodel.agent.IAgent;
 import msi.gama.precompiler.GamlAnnotations.action;
 import msi.gama.precompiler.GamlAnnotations.arg;
 import msi.gama.precompiler.GamlAnnotations.doc;
@@ -14,6 +15,8 @@ import msi.gaml.architecture.reflex.ReflexArchitecture;
 import msi.gaml.statements.IStatement;
 import msi.gaml.types.IType;
 import ummisco.gama.chemmisol.types.ChemicalSystem;
+import ummisco.gama.chemmisol.units.ChemicalUnits;
+import ummisco.gama.chemmisol.units.UnitConversion;
 import ummisco.gama.chemmisol.ChemmisolLoader;
 import ummisco.gama.chemmisol.Phase;
 import ummisco.gama.chemmisol.statements.ChemicalSystemStatement;
@@ -41,7 +44,7 @@ import ummisco.gama.chemmisol.types.ChemicalComponentType;
 					@example("chemical_component SOH <- chemical_component([phase::MINERAL, total_concentration::1])")
 			}
 			)),
-	@variable(name="AQUEOUS", type = IType.STRING, constant=true, doc=@doc(
+	@variable(name=ChemicalArchitecture.AQUEOUS, type = IType.STRING, constant=true, doc=@doc(
 			value="Aqueous phase",
 			comment="""
 					Represents a species living in a liquid with a fixed volume.\
@@ -52,7 +55,7 @@ import ummisco.gama.chemmisol.types.ChemicalComponentType;
 					@example("chemical_species H3PO4 <- chemical_component([phase::AQUEOUS])"),
 			}
 			)),
-	@variable(name="MINERAL", type = IType.STRING, constant=true, doc=@doc(
+	@variable(name=ChemicalArchitecture.MINERAL, type = IType.STRING, constant=true, doc=@doc(
 			value="Mineral phase",
 			comment="""
 					Represents a surface complex on a mineral. Its concentration\
@@ -63,12 +66,20 @@ import ummisco.gama.chemmisol.types.ChemicalComponentType;
 					@example("chemical_species SOH2PO4 <- chemical_species([phase::MINERAL])"),
 			}
 			)),
-	@variable(name="SOLVENT", type = IType.STRING, constant=true, doc=@doc(
+	@variable(name=ChemicalArchitecture.SOLVENT, type = IType.STRING, constant=true, doc=@doc(
 			value="Solvent phase",
 			comment="A solvent is always in excess and has a fixed activity of 1.",
 			examples= {
 					@example("chemical_component H2O <- chemical_component([phase::SOLVENT])")
 			}
+			)),
+	@variable(name=ChemicalArchitecture.SITES_QUANTITY, type = IType.FLOAT, constant=false, doc=@doc(
+			value="Total quantity of sites of the surface complex.",
+			comment="""
+					Null if the solid_concentration, specific_surface_area and \
+					site_concentration facets was not provided to the \
+					chemical_system statement.
+					"""
 			))
 })
 @doc(
@@ -84,6 +95,7 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	public static final String REACTION = "reaction";
 	public static final String PHASE = "phase";
 	public static final String TOTAL_CONCENTRATION = "total_concentration";
+	public static final String SITES_QUANTITY = "sites_quantity";
 	public static final String AQUEOUS = "AQUEOUS";
 	public static final String MINERAL = "MINERAL";
 	public static final String SOLVENT = "SOLVENT";
@@ -136,7 +148,6 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	
 	@Override
 	public boolean init(IScope scope) throws GamaRuntimeException {
-		super.init(scope);
 
 		ChemicalSystem chemical_system =
 			(ChemicalSystem) scope.execute(chemical_system_statement).getValue();
@@ -145,7 +156,16 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 			CHEMICAL_SYSTEM_VARIABLE,
 			chemical_system
 		);
+		System.out.println(chemical_system.sitesQuantity() * ChemicalUnits.mol);
+		scope.getAgent().setAttribute(
+				SITES_QUANTITY,
+				chemical_system.sitesQuantity() * ChemicalUnits.mol
+				);
+		System.out.println((double) scope.getAgent().getAttribute(SITES_QUANTITY));
 
+		// Executes the agent init {} statement after the chemical system has
+		// been initialized
+		super.init(scope);
 		return false;
 	}
 
@@ -216,8 +236,14 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 			system.
 			""")
 	public Object set_total_concentration(final IScope scope) throws GamaRuntimeException {
+		ChemicalComponent component = (ChemicalComponent) scope.getArg(COMPONENT);
 		((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE))
-				.setTotalConcentration((ChemicalComponent) scope.getArg(COMPONENT), scope.getFloatArg(TOTAL_CONCENTRATION));
+				.setTotalConcentration(component, 
+						UnitConversion.convertConcentration(
+								component.getPhase(),
+								scope.getFloatArg(TOTAL_CONCENTRATION)
+								)
+						);
 		return null;
 	}
 
@@ -238,5 +264,11 @@ public class ChemicalArchitecture extends ReflexArchitecture {
 	public double reaction_quotient(final IScope scope) throws GamaRuntimeException {
 		ChemicalSystem system = ((ChemicalSystem) scope.getAgent().getAttribute(CHEMICAL_SYSTEM_VARIABLE));
 		return system.reactionQuotient(scope.getStringArg(REACTION));
+	}
+	
+	@getter(SITES_QUANTITY)
+	public double sites_quantity(final IAgent agent) {
+		System.out.println("A: " + (double) agent.getAttribute(SITES_QUANTITY));
+		return (double) agent.getAttribute(SITES_QUANTITY);
 	}
 }

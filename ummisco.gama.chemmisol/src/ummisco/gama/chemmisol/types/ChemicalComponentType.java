@@ -10,12 +10,11 @@ import msi.gama.precompiler.GamlAnnotations.type;
 import msi.gama.precompiler.GamlAnnotations.usage;
 import msi.gama.runtime.IScope;
 import msi.gama.runtime.exceptions.GamaRuntimeException;
-import msi.gaml.constants.GamlCoreUnits;
 import msi.gaml.types.GamaType;
 import msi.gaml.types.IType;
 import ummisco.gama.chemmisol.Phase;
 import ummisco.gama.chemmisol.architecture.ChemicalArchitecture;
-import ummisco.gama.chemmisol.units.ChemicalUnits;
+import ummisco.gama.chemmisol.units.UnitConversion;
 
 @type(
 	    name = ChemicalComponentType.CHEMICAL_COMPONENT_TYPE, 
@@ -59,9 +58,6 @@ public class ChemicalComponentType extends GamaType<ChemicalComponent> {
 	public static final String CHEMICAL_PHASE = ChemicalArchitecture.PHASE;
 	public static final int CHEMICAL_COMPONENT_TYPE_ID = IType.AVAILABLE_TYPES+3;
 	public static final String CHEMICAL_COMPONENT_TYPE = "chemical_component";
-	
-	// Base unit used by the chemmisol library (0.1mol/l specified in GAML must correspond to concentration=0.1 in chemmisol)
-	private static final double base_concentration_unit = ChemicalUnits.mol / GamlCoreUnits.l;
 	
 	@Override
 	public ChemicalComponent getDefault() {
@@ -130,7 +126,13 @@ public class ChemicalComponentType extends GamaType<ChemicalComponent> {
 			return component;
 		}
 		if(obj instanceof Number) {
-			return new ChemicalComponent(((Number) obj).doubleValue() / base_concentration_unit);
+			// The component is assumed to be AQUEOUS
+			return new ChemicalComponent(
+					UnitConversion.convertConcentration(
+							Phase.AQUEOUS,
+							((Number) obj).doubleValue()
+							)
+					);
 		}
 		if(obj instanceof Map) {
 			Double concentration = (Double) ((Map<?, ?>) obj).get(ChemicalComponentType.CHEMICAL_CONCENTRATION);
@@ -141,13 +143,19 @@ public class ChemicalComponentType extends GamaType<ChemicalComponent> {
 			if(concentration == null)
 				return new ChemicalComponent(phase);
 			if(phase == null)
-				return new ChemicalComponent(concentration / base_concentration_unit);
-			return new ChemicalComponent(phase, concentration / base_concentration_unit);
+				// The component is assumed to be AQUEOUS
+				return new ChemicalComponent(
+						UnitConversion.convertConcentration(Phase.AQUEOUS, concentration)
+						);
+			return new ChemicalComponent(phase, UnitConversion.convertConcentration(phase, concentration));
 		}
 		if(obj instanceof List) {
 			List<?> l = (List<?>) obj;
 			if(l.size() == 2) {
-				return new ChemicalComponent((Phase) l.get(0), ((double) l.get(1)) / base_concentration_unit);
+				Phase phase = (Phase) l.get(0);
+				return new ChemicalComponent(phase, 
+						UnitConversion.convertConcentration(phase, ((double) l.get(1)))
+						);
 			}
 		}
 		return null;
